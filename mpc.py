@@ -27,7 +27,7 @@ def random_shooting_mpc(start_state, model, reward_fn, horizon, n_samples, gamma
         for t in range(horizon):
             action = control_sequences[i, t]
             next_state = model(state, action)
-            rewards[i] += reward_fn(next_state) * gamma**t
+            rewards[i] += reward_fn(next_state, action) * gamma**t
             state = next_state
     
     # Find the optimal control sequence
@@ -38,52 +38,54 @@ def random_shooting_mpc(start_state, model, reward_fn, horizon, n_samples, gamma
 
 
 def pendulum_model(state, action):
-    env = gym.make('Pendulum-v1')
-    env.reset()
-    env.state = state
-    next_state, _, _, _ = env.step([action])
-    env.close()
+    temp_env = gym.make('Pendulum-v1')
+    temp_env.reset()
+    temp_env.state = state
+    next_state, _, _, _ = temp_env.step([action])
+    temp_env.close()
     return next_state
 
-def pendulum_reward(state):
-    env = gym.make('Pendulum-v1')
-    env.reset()
-    env.state = state
-    cos_theta, sin_theta, theta_dot = env.state
-    env.close()
-    return -(theta_dot**2 + 0.1*sin_theta**2)
+def pendulum_reward(state, action):
+    temp_env = gym.make('Pendulum-v1')
+    temp_env.reset()
+    temp_env.state = state
+    cos_theta, sin_theta, theta_dot = temp_env.state
+    temp_env.close()
+    return -(theta_dot**2 + 0.1*cos_theta**2 + 0.001*(action**2))
 
 
 env = gym.make('Pendulum-v1')
-start_state = env.reset()
 horizon = 10
 n_samples = 100
 gamma = 0.98
-optimal_control = random_shooting_mpc(start_state, pendulum_model, pendulum_reward, horizon, n_samples, gamma)
 
-# Apply the first action in the optimal control sequence
-action = optimal_control[0]
-next_state, reward, done, info = env.step([action])
-
-
-result = []
 obs = env.reset()
-cumulated_reward = 0
-for i in range(100):
-    all_rewards = 0
-    for j in range(500):
-        action = random_shooting_mpc(obs, pendulum_model, pendulum_reward, horizon, n_samples, gamma)[0]
-        next_state, rewards, done, info = env.step([action])
-        # env.render()
-        all_rewards += rewards
-    # reset the environment
-    obs = env.reset()
-    cumulated_reward += all_rewards
-    print("All reward over 500 episodes: {}".format(all_rewards) + " " + str(i))
-result.append(cumulated_reward/100)
+rewards = []
+for i in range(100000):
+    action = random_shooting_mpc(obs, pendulum_model, pendulum_reward, horizon, n_samples, gamma)[0]
+    next_state, reward, done, info = env.step([action])
+    rewards.append(reward)
+    if i % 1000 == 0:
+        print("at step " + str(i))
 
-print(result)
+# calculate statistics
+rewards_mean = np.mean(rewards)
+rewards_std = np.std(rewards)
+rewards_max = np.max(rewards)
+rewards_min = np.min(rewards)
+rewards_median = np.median(rewards)
+rewards_25 = np.percentile(rewards, 25)
+rewards_75 = np.percentile(rewards, 75)
 
+print("mean: " + str(rewards_mean))
+print("std: " + str(rewards_std))
+print("max: " + str(rewards_max))
+print("min: " + str(rewards_min))
+print("median: " + str(rewards_median))
+print("25: " + str(rewards_25))
+print("75: " + str(rewards_75))
+
+env.close()
 
 # cummulative_reward = 0
 # for _ in range(1000):
