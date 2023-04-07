@@ -1,0 +1,5 @@
+https://jejjohnson.github.io/research_notebook/content/notes/gps/literature.html#fancy-gp-kernels
+
+https://jejjohnson.github.io/gp_model_zoo/literature/multioutput/
+
+https://docs.gpytorch.ai/en/stable/examples/03_Multitask_Exact_GPs/Multitask_GP_Regression.html
